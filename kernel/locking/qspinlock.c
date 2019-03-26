@@ -434,6 +434,7 @@ pv_queue:
 	 * if there was a previous node; link it and wait until reaching the
 	 * head of the waitqueue.
 	 */
+	/*This is linking kwonje*/
 	if (old & _Q_TAIL_MASK) {
 		prev = decode_tail(old);
 
