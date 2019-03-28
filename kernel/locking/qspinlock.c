@@ -314,6 +314,7 @@ void queued_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 
 	BUILD_BUG_ON(CONFIG_NR_CPUS >= (1U << _Q_TAIL_CPU_BITS));
 
+	/*check what is pv kwonje*/
 	if (pv_enabled())
 		goto pv_queue;
 
@@ -385,13 +386,16 @@ void queued_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 queue:
 	qstat_inc(qstat_lock_slowpath, true);
 pv_queue:
+	/*per cpu node... to circular linked? kwonje*/
 	node = this_cpu_ptr(&mcs_nodes[0]);
+	
 	idx = node->count++;
 	tail = encode_tail(smp_processor_id(), idx);
 
 	node += idx;
+/*
 	if(strcmp(current->comm,"filebench")==0)
-		printk("%d q-spin: %d\n",current->pid,idx);//checking queuespinlock kwonje
+		printk("%d q-spin: %d\n",current->pid,idx);//checking queuespinlock kwonje*/
 
 	/*
 	 * Ensure that we increment the head node->count before initialising
