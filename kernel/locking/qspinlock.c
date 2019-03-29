@@ -308,7 +308,7 @@ static __always_inline u32  __pv_wait_head_or_lock(struct qspinlock *lock,
  */
 void queued_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 {
-	struct mcs_spinlock *prev, *next, *node;
+	struct mcs_spinlock *prev, *next, *node, *head;
 	u32 old, tail;
 	int idx;
 
@@ -387,7 +387,7 @@ queue:
 	qstat_inc(qstat_lock_slowpath, true);
 pv_queue:
 	/*per cpu node... to circular linked? kwonje*/
-	node = this_cpu_ptr(&mcs_nodes[0]);
+	node = this_cpu_ptr(&mcs_nodes[0]);/*prob head kwonje*/
 	
 	idx = node->count++;
 	tail = encode_tail(smp_processor_id(), idx);
