@@ -314,7 +314,7 @@ void queued_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 
 	BUILD_BUG_ON(CONFIG_NR_CPUS >= (1U << _Q_TAIL_CPU_BITS));
 
-	/*check what is pv kwonje*/
+	/*pv is for kvm and xen (not in my scope) kwonje*/
 	if (pv_enabled())
 		goto pv_queue;
 
@@ -388,7 +388,9 @@ queue:
 pv_queue:
 	/*per cpu node... to circular linked? kwonje*/
 	node = this_cpu_ptr(&mcs_nodes[0]);/*prob head kwonje*/
+/*	head = this_cpu_ptr(&mcs_nodes[0]); new-kwonje
 	
+*/	
 	idx = node->count++;
 	tail = encode_tail(smp_processor_id(), idx);
 
@@ -406,6 +408,8 @@ pv_queue:
 
 	node->locked = 0;
 	node->next = NULL;
+	/*WRITE_ONCE(node->next,head)
+node->next = head new*/
 	pv_init_node(node);
 
 	/*
@@ -438,7 +442,7 @@ pv_queue:
 	 * if there was a previous node; link it and wait until reaching the
 	 * head of the waitqueue.
 	 */
-	/*This is linking kwonje*/
+	/*This is linking and waiting to become a head kwonje*/
 	if (old & _Q_TAIL_MASK) {
 		prev = decode_tail(old);
 
