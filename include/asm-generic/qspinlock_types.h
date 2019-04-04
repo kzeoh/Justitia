@@ -58,8 +58,8 @@ typedef struct qspinlock {
 		};
 #endif
 	};
-	/*info about weight of node kwonje*/
-	short weight_num[4];
+	/*pointer to head of the queue kwonje*/
+	u16 head;	
 
 } arch_spinlock_t;
 

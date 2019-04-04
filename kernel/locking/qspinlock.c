@@ -434,7 +434,8 @@ node->next = head new*/
 	 *
 	 * p,*,* -> n,*,*
 	 */
-	/*could not acquire the lock kwonje*/
+	/*could not acquire the lock therefore set qspinlock tail to current node
+	and get the old tail value- kwonje*/
 	old = xchg_tail(lock, tail);
 	next = NULL;
 
@@ -442,7 +443,8 @@ node->next = head new*/
 	 * if there was a previous node; link it and wait until reaching the
 	 * head of the waitqueue.
 	 */
-	/*This is linking and waiting to become a head kwonje*/
+	/*If there was previous node, then link previous nodes' next field to
+	current lock node address  kwonje*/
 	if (old & _Q_TAIL_MASK) {
 		prev = decode_tail(old);
 

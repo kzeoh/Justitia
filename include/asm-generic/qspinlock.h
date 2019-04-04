@@ -86,7 +86,7 @@ static __always_inline void queued_spin_lock(struct qspinlock *lock)
 	val = atomic_cmpxchg_acquire(&lock->val, 0, _Q_LOCKED_VAL);
 	//printk("val");	
 	if (likely(val == 0)){
-		printk("val");
+		//printk("val");
 		return;
 	}
 //	if(strcmp(current->comm,"filebench")==0||current->pid>2000)
