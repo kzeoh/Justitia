@@ -59,7 +59,7 @@ typedef struct qspinlock {
 #endif
 	};
 	/*pointer to head of the queue kwonje*/
-	u16 head;	
+	atomic_t head;	
 
 } arch_spinlock_t;
 

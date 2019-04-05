@@ -129,6 +129,22 @@ static inline __pure struct mcs_spinlock *decode_tail(u32 tail)
 	return per_cpu_ptr(&mcs_nodes[idx], cpu);
 }
 
+static inline __pure u32 encode_head(int cpu, int idx){
+	u32 head;
+	
+	head = (cpu + 1) << _Q_TAIL_CPU_OFFSET;
+	head |= idx << _Q_TAIl_IDX_OFFSET;
+
+	return head;
+
+}
+static inline __pure struct mcs_spinlock *decode_head(u32 head){
+	int cpu = (head >> _Q_TAIL_CPU_OFFSET) - 1;
+	int idx = (head & _Q_TAIL_IDX_MASK) >> _Q_TAIL_IDX_OFFSET;
+
+	return per_cpu_ptr(&mcs_nodes[idx],cpu);
+}
+
 #define _Q_LOCKED_PENDING_MASK (_Q_LOCKED_MASK | _Q_PENDING_MASK)
 
 #if _Q_PENDING_BITS == 8

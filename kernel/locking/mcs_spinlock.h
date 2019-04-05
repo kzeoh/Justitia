@@ -18,7 +18,8 @@
 struct mcs_spinlock {
 	struct mcs_spinlock *next;
 	int locked; /* 1 if lock acquired */
-	int count;  /* nesting count, see qspinlock.c */
+	short count;  /* nesting count, see qspinlock.c */
+	short weight; /*weight value of process holding the lock kwonje*/
 };
 
 #ifndef arch_mcs_spin_lock_contended
