@@ -2999,11 +2999,8 @@ struct page *rmqueue(struct zone *preferred_zone,
 {
 	unsigned long flags;
 	struct page *page;
-//	printk("in rmqueue\n");	
-	/*kwonje*/
+
 	if (likely(order == 0)) {
-		if(strcmp(current->comm,"filebench") == 0)
-			printk("%d rmqueue: filebench  order 0 page alloc", current->pid);
 		page = rmqueue_pcplist(preferred_zone, zone, order,
 				gfp_flags, migratetype);
 		goto out;
@@ -3013,9 +3010,6 @@ struct page *rmqueue(struct zone *preferred_zone,
 	 * We most definitely don't want callers attempting to
 	 * allocate greater than order-1 page units with __GFP_NOFAIL.
 	 */
-	//printk("current thread name: %s",current->comm);
-	if(strcmp(current->comm,"filebench")==0)	
-		printk("%d rmqueue: filebench order > 0 lock try\n",current->pid);
 	WARN_ON_ONCE((gfp_flags & __GFP_NOFAIL) && (order > 1));
 	spin_lock_irqsave(&zone->lock, flags);
 
@@ -3029,9 +3023,7 @@ struct page *rmqueue(struct zone *preferred_zone,
 		if (!page)
 			page = __rmqueue(zone, order, migratetype);
 	} while (page && check_new_pages(page, order));
-	spin_unlock(&zone->lock);	
-	if(strcmp(current->comm, "filebench")==0)
-		printk("%d rmqueue: filebench order > 0 unlock\n",current->pid);
+	spin_unlock(&zone->lock);
 	if (!page)
 		goto failed;
 	__mod_zone_freepage_state(zone, -(1 << order),
@@ -3272,7 +3264,6 @@ static bool zone_allows_reclaim(struct zone *local_zone, struct zone *zone)
 #endif	/* CONFIG_NUMA */
 
 /*
-kwonje
  * get_page_from_freelist goes through the zonelist trying to allocate
  * a page.
  */

@@ -130,22 +130,6 @@ static inline __pure struct mcs_spinlock *decode_tail(u32 tail)
 	return per_cpu_ptr(&mcs_nodes[idx], cpu);
 }
 
-/*static inline __pure u32 encode_head(int cpu, int idx){
-	u32 head;
-	
-	head = (cpu + 1) << _Q_TAIL_CPU_OFFSET;
-	head |= idx << _Q_TAIl_IDX_OFFSET;
-
-	return head;
-
-}
-static inline __pure struct mcs_spinlock *decode_head(u32 head){
-	int cpu = (head >> _Q_TAIL_CPU_OFFSET) - 1;
-	int idx = (head & _Q_TAIL_IDX_MASK) >> _Q_TAIL_IDX_OFFSET;
-
-	return per_cpu_ptr(&mcs_nodes[idx],cpu);
-}*/
-
 #define _Q_LOCKED_PENDING_MASK (_Q_LOCKED_MASK | _Q_PENDING_MASK)
 
 #if _Q_PENDING_BITS == 8
@@ -301,7 +285,6 @@ static __always_inline u32  __pv_wait_head_or_lock(struct qspinlock *lock,
 
 #endif /* _GEN_PV_LOCK_SLOWPATH */
 
-/*start of the slowpath q-spin lock kwonje*/
 /**
  * queued_spin_lock_slowpath - acquire the queued spinlock
  * @lock: Pointer to queued spinlock structure
@@ -327,12 +310,10 @@ void queued_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 {
 	struct mcs_spinlock *prev, *next, *node;
 	u32 old, tail;
-	int idx;
-//	int weight;
+	int idx, weight;
 
 	BUILD_BUG_ON(CONFIG_NR_CPUS >= (1U << _Q_TAIL_CPU_BITS));
 
-	/*pv is for kvm and xen (not in my scope) kwonje*/
 	if (pv_enabled())
 		goto pv_queue;
 
@@ -404,18 +385,11 @@ void queued_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 queue:
 	qstat_inc(qstat_lock_slowpath, true);
 pv_queue:
-	/*per cpu node... to circular linked? kwonje*/
-	node = this_cpu_ptr(&mcs_nodes[0]);/*prob head kwonje*/
-/*	head = this_cpu_ptr(&mcs_nodes[0]); new-kwonje
-	
-*/	
+	node = this_cpu_ptr(&mcs_nodes[0]);
 	idx = node->count++;
 	tail = encode_tail(smp_processor_id(), idx);
 
 	node += idx;
-/*
-	if(strcmp(current->comm,"filebench")==0)
-		printk("%d q-spin: %d\n",current->pid,idx);//checking queuespinlock kwonje*/
 
 	/*
 	 * Ensure that we increment the head node->count before initialising
@@ -424,10 +398,15 @@ pv_queue:
 	 */
 	barrier();
 
+	/*it stores weight value of process into the mcs_lock kwonje*/	
+	if(task_css_set(current)->subsys[3]!=NULL){
+		weight = task_css_set(current)->subsys[3]->cgroup->weight;
+		printk("weight: %d\n",weight);
+		node->weight = weight;
+	}
+
 	node->locked = 0;
 	node->next = NULL;
-	/*WRITE_ONCE(node->next,head)
-node->next = head new*/
 	pv_init_node(node);
 
 	/*
@@ -436,7 +415,7 @@ node->next = head new*/
 	 * weren't watching.
 	 */
 	if (queued_spin_trylock(lock))
-		goto release; /*acquired lock kwonje*/
+		goto release;
 
 	/*
 	 * Ensure that the initialisation of @node is complete before we
@@ -452,8 +431,6 @@ node->next = head new*/
 	 *
 	 * p,*,* -> n,*,*
 	 */
-	/*could not acquire the lock therefore set qspinlock tail to current node
-	and get the old tail value- kwonje*/
 	old = xchg_tail(lock, tail);
 	next = NULL;
 
@@ -461,8 +438,6 @@ node->next = head new*/
 	 * if there was a previous node; link it and wait until reaching the
 	 * head of the waitqueue.
 	 */
-	/*If there was previous node, then link previous nodes' next field to
-	current lock node address  kwonje*/
 	if (old & _Q_TAIL_MASK) {
 		prev = decode_tail(old);
 
@@ -510,7 +485,6 @@ node->next = head new*/
 	val = atomic_cond_read_acquire(&lock->val, !(VAL & _Q_LOCKED_PENDING_MASK));
 
 locked:
-	/*kwonje-reclaiming lock from here*/
 	/*
 	 * claim the lock:
 	 *
@@ -538,13 +512,6 @@ locked:
 	/*
 	 * contended path; wait for next if not observed yet, release.
 	 */
-	/*if(strcmp(current->comm,"filebench")==0){
-		weight = task_css_set(current)->subsys[3]->cgroup->weight;
-		node->weight = weight;		
-	//	printk("weight : %d\n",weight);
-
-	}*/
-
 	if (!next)
 		next = smp_cond_load_relaxed(&node->next, (VAL));
 

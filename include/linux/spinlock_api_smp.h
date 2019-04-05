@@ -14,8 +14,6 @@
  * portions Copyright 2005, Red Hat, Inc., Ingo Molnar
  * Released under the General Public License (GPL).
  */
-//#include <asm/current.h>
-//#include <linux/fs.h>
 
 int in_lock_functions(unsigned long addr);
 
@@ -109,8 +107,6 @@ static inline unsigned long __raw_spin_lock_irqsave(raw_spinlock_t *lock)
 
 	local_irq_save(flags);
 	preempt_disable();
-//	if(strcmp(get_current()->comm,"filebench")==0||get_current()->pid>3000)//kwonje
-	printk("raw");
 	spin_acquire(&lock->dep_map, 0, 0, _RET_IP_);
 	/*
 	 * On lockdep we dont want the hand-coded irq-enable of

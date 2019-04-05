@@ -337,10 +337,10 @@ struct cgroup {
 	 * descendant of another without traversing the hierarchy.
 	 */
 	int level;
-
+	
 	/* Maximum allowed descent tree depth */
 	int max_depth;
-	
+
 	/*added weight variable on cgroup struct kwonje*/
 	int weight;
 

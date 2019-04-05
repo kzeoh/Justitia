@@ -57,7 +57,6 @@
 #include <linux/stringify.h>
 #include <linux/bottom_half.h>
 #include <asm/barrier.h>
-//#include <linux/sched.h>
 
 
 /*
@@ -177,7 +176,6 @@ do {								\
 #else
 static inline void do_raw_spin_lock(raw_spinlock_t *lock) __acquires(lock)
 {
-	printk("tmp\n");
 	__acquire(lock);
 	arch_spin_lock(&lock->raw_lock);
 }

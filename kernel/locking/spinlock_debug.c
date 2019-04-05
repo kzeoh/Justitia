@@ -110,8 +110,6 @@ static inline void debug_spin_unlock(raw_spinlock_t *lock)
 void do_raw_spin_lock(raw_spinlock_t *lock)
 {
 	debug_spin_lock_before(lock);
-//	if(strcmp(current->comm,"filebench")==0||current->pid>2000)
-//		printk("before arch_spin_lock");
 	arch_spin_lock(&lock->raw_lock);
 	debug_spin_lock_after(lock);
 }

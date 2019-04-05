@@ -73,7 +73,6 @@ static __always_inline int queued_spin_trylock(struct qspinlock *lock)
 }
 
 extern void queued_spin_lock_slowpath(struct qspinlock *lock, u32 val);
-//extern void checking_if_called();
 
 /**
  * queued_spin_lock - acquire a queued spinlock
@@ -84,13 +83,8 @@ static __always_inline void queued_spin_lock(struct qspinlock *lock)
 	u32 val;
 
 	val = atomic_cmpxchg_acquire(&lock->val, 0, _Q_LOCKED_VAL);
-	//printk("val");	
-	if (likely(val == 0)){
-		//printk("val");
+	if (likely(val == 0))
 		return;
-	}
-//	if(strcmp(current->comm,"filebench")==0||current->pid>2000)
-//		printk("val = %u", val);
 	queued_spin_lock_slowpath(lock, val);
 }
 
@@ -122,7 +116,7 @@ static __always_inline bool virt_spin_lock(struct qspinlock *lock)
 #define arch_spin_is_locked(l)		queued_spin_is_locked(l)
 #define arch_spin_is_contended(l)	queued_spin_is_contended(l)
 #define arch_spin_value_unlocked(l)	queued_spin_value_unlocked(l)
-#define arch_spin_lock(l)		queued_spin_lock(l)/*kwonje arch_spin_lock goes here*/
+#define arch_spin_lock(l)		queued_spin_lock(l)
 #define arch_spin_trylock(l)		queued_spin_trylock(l)
 #define arch_spin_unlock(l)		queued_spin_unlock(l)
 

@@ -1841,7 +1841,7 @@ static int __cfq_set_weight(struct cgroup_subsys_state *css, u64 val,
 		cfqgd->weight = val;
 	else
 		cfqgd->leaf_weight = val;
-
+	
 	/*adding blkio weight to the cgroup value kwonje*/
 	css->cgroup->weight = val;
 

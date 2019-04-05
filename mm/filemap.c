@@ -1508,7 +1508,6 @@ repeat:
 EXPORT_SYMBOL(find_lock_entry);
 
 /**
-kwonje-main!!! read and write call this
  * pagecache_get_page - find and get a page reference
  * @mapping: the address_space to search
  * @offset: the page index
@@ -1537,8 +1536,7 @@ struct page *pagecache_get_page(struct address_space *mapping, pgoff_t offset,
 	int fgp_flags, gfp_t gfp_mask)
 {
 	struct page *page;
-	if(strcmp(current->comm,"filebench")==0)
-		printk("%d pagecache_get_page start\n",current->pid);
+
 repeat:
 	page = find_get_entry(mapping, offset);
 	if (radix_tree_exceptional_entry(page))
@@ -1595,8 +1593,7 @@ no_page:
 				goto repeat;
 		}
 	}
-	if(strcmp(current->comm,"filebench")==0)
-		printk("%d finished pagecache_get_page\n",current->pid);
+
 	return page;
 }
 EXPORT_SYMBOL(pagecache_get_page);
