@@ -340,6 +340,9 @@ struct cgroup {
 
 	/* Maximum allowed descent tree depth */
 	int max_depth;
+	
+	/*added weight variable on cgroup struct kwonje*/
+	int weight;
 
 	/*
 	 * Keep track of total numbers of visible and dying descent cgroups.

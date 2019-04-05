@@ -327,6 +327,7 @@ void queued_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 	struct mcs_spinlock *prev, *next, *node, *head;
 	u32 old, tail;
 	int idx;
+	int weight;
 
 	BUILD_BUG_ON(CONFIG_NR_CPUS >= (1U << _Q_TAIL_CPU_BITS));
 
@@ -536,6 +537,11 @@ locked:
 	/*
 	 * contended path; wait for next if not observed yet, release.
 	 */
+	if(strcmp(current->comm,"filebench")==0){
+		weight = task_css_set(current)->subsys[3]->cgroup->weight;
+		printk("weight : %d\n",weight);
+	}
+
 	if (!next)
 		next = smp_cond_load_relaxed(&node->next, (VAL));
 
