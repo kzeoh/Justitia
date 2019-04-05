@@ -29,6 +29,7 @@
 #include <linux/hardirq.h>
 #include <linux/mutex.h>
 #include <linux/prefetch.h>
+#include <linux/cgroup.h>/*kwonje*/
 #include <asm/byteorder.h>
 #include <asm/qspinlock.h>
 
@@ -129,7 +130,7 @@ static inline __pure struct mcs_spinlock *decode_tail(u32 tail)
 	return per_cpu_ptr(&mcs_nodes[idx], cpu);
 }
 
-static inline __pure u32 encode_head(int cpu, int idx){
+/*static inline __pure u32 encode_head(int cpu, int idx){
 	u32 head;
 	
 	head = (cpu + 1) << _Q_TAIL_CPU_OFFSET;
@@ -143,7 +144,7 @@ static inline __pure struct mcs_spinlock *decode_head(u32 head){
 	int idx = (head & _Q_TAIL_IDX_MASK) >> _Q_TAIL_IDX_OFFSET;
 
 	return per_cpu_ptr(&mcs_nodes[idx],cpu);
-}
+}*/
 
 #define _Q_LOCKED_PENDING_MASK (_Q_LOCKED_MASK | _Q_PENDING_MASK)
 
@@ -324,10 +325,10 @@ static __always_inline u32  __pv_wait_head_or_lock(struct qspinlock *lock,
  */
 void queued_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 {
-	struct mcs_spinlock *prev, *next, *node, *head;
+	struct mcs_spinlock *prev, *next, *node;
 	u32 old, tail;
 	int idx;
-	int weight;
+//	int weight;
 
 	BUILD_BUG_ON(CONFIG_NR_CPUS >= (1U << _Q_TAIL_CPU_BITS));
 
@@ -537,10 +538,12 @@ locked:
 	/*
 	 * contended path; wait for next if not observed yet, release.
 	 */
-	if(strcmp(current->comm,"filebench")==0){
+	/*if(strcmp(current->comm,"filebench")==0){
 		weight = task_css_set(current)->subsys[3]->cgroup->weight;
-		printk("weight : %d\n",weight);
-	}
+		node->weight = weight;		
+	//	printk("weight : %d\n",weight);
+
+	}*/
 
 	if (!next)
 		next = smp_cond_load_relaxed(&node->next, (VAL));

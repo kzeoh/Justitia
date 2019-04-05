@@ -1595,7 +1595,7 @@ no_page:
 				goto repeat;
 		}
 	}
-	if(strmp(current->comm,"filebench")==0)
+	if(strcmp(current->comm,"filebench")==0)
 		printk("%d finished pagecache_get_page\n",current->pid);
 	return page;
 }

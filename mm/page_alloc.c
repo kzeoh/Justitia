@@ -2999,7 +2999,7 @@ struct page *rmqueue(struct zone *preferred_zone,
 {
 	unsigned long flags;
 	struct page *page;
-	printk("in rmqueue\n");	
+//	printk("in rmqueue\n");	
 	/*kwonje*/
 	if (likely(order == 0)) {
 		if(strcmp(current->comm,"filebench") == 0)
