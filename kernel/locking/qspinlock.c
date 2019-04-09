@@ -553,7 +553,25 @@ locked:
 		next = smp_cond_load_relaxed(&node->next, (VAL));
 		if(next&&flag){
 			printk("next: %d\t%d\t%d\n",next->weight,next->locked,next->count);
-
+			origin = next;
+			//temp = (origin&_Q_TAIL_MASK);
+			//origin Q_TAIL_OFFSET
+/*			while(origin){
+				if(!vict){
+					vict=origin;
+				}
+				if(origin->next)
+					if(vict->weight<origin->next->weight){
+						sprev=origin;
+						vict=origin->next;
+					}
+				origin=origin->next;
+			}
+			if(vict!=origin){
+				sprev->next=vict->next;
+				vict->next=next
+				next=vict
+			}*/
 		}	
 	}
 	arch_mcs_spin_unlock_contended(&next->locked);
