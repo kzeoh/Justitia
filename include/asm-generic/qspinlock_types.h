@@ -46,6 +46,7 @@ typedef struct qspinlock {
 			u16	locked_pending;
 			u16	tail;
 		};
+	//	u32 head;
 #else
 		struct {
 			u16	tail;
@@ -56,6 +57,7 @@ typedef struct qspinlock {
 			u8	pending;
 			u8	locked;
 		};
+		
 #endif
 	};
 } arch_spinlock_t;

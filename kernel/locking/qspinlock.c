@@ -400,9 +400,11 @@ pv_queue:
 
 	/*it stores weight value of process into the mcs_lock kwonje*/	
 	if(task_css_set(current)->subsys[3]!=NULL){
+		
 		weight = task_css_set(current)->subsys[3]->cgroup->weight;
-		printk("weight: %d\n",weight);
+		//printk("weight: %d\n",weight);
 		node->weight = weight;
+		printk("node->weight = %d\n",node->weight);
 	}
 
 	node->locked = 0;
