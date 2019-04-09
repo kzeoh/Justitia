@@ -308,9 +308,9 @@ static __always_inline u32  __pv_wait_head_or_lock(struct qspinlock *lock,
  */
 void queued_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 {
-	struct mcs_spinlock *prev, *next, *node;
+	struct mcs_spinlock *prev, *next, *node, *origin, *vict=NULL,*sprev=NULL;
 	u32 old, tail;
-	int idx, weight;
+	int idx, weight, flag=0;
 
 	BUILD_BUG_ON(CONFIG_NR_CPUS >= (1U << _Q_TAIL_CPU_BITS));
 
@@ -400,11 +400,14 @@ pv_queue:
 
 	/*it stores weight value of process into the mcs_lock kwonje*/	
 	if(task_css_set(current)->subsys[3]!=NULL){
-		
+			
 		weight = task_css_set(current)->subsys[3]->cgroup->weight;
 		//printk("weight: %d\n",weight);
 		node->weight = weight;
-		printk("node->weight = %d\n",node->weight);
+		if(node->weight!=500&&node->weight!=1000&&node->weight>=100){
+			printk("node->weight = %d\n",node->weight);
+			flag=1;
+		}
 	}
 
 	node->locked = 0;
@@ -435,7 +438,7 @@ pv_queue:
 	 */
 	old = xchg_tail(lock, tail);
 	next = NULL;
-
+	
 	/*
 	 * if there was a previous node; link it and wait until reaching the
 	 * head of the waitqueue.
@@ -456,8 +459,39 @@ pv_queue:
 		 * to reduce latency in the upcoming MCS unlock operation.
 		 */
 		next = READ_ONCE(node->next);
-		if (next)
+
+		/*we're out of the local spinning lock and tries to get main 
+		 *lock(q-spinlock). Therefore, we tries to set the next node 
+		 *according to the weight priority - kwonje*/
+		if (next){
+			if(flag){
+				origin = next;
+				//temp = (origin&_Q_TAIL_MASK);
+				//origin Q_TAIL_OFFSET
+				printk("origin: %d\t%d\t%d\n",origin->weight,origin->locked,origin->count);
+//				printk("vict: %u\n",_Q_TAIL_MASK);
+				
+	/*			while(origin){
+					if(!vict){
+						vict=origin;
+					}
+					if(origin->next)
+						if(vict->weight<origin->next->weight){
+							sprev=origin;
+							vict=origin->next;
+						}
+					origin=origin->next;
+				}
+				if(vict!=origin){
+					sprev->next=vict->next;
+					vict->next=next
+					next=vict
+				}
+
+*/
+			}
 			prefetchw(next);
+		}
 	}
 
 	/*
@@ -513,10 +547,15 @@ locked:
 
 	/*
 	 * contended path; wait for next if not observed yet, release.
+	 * add another lookup code in case next observed at this time - kwonje
 	 */
-	if (!next)
+	if (!next){
 		next = smp_cond_load_relaxed(&node->next, (VAL));
+		if(next&&flag){
+			printk("next: %d\t%d\t%d\n",next->weight,next->locked,next->count);
 
+		}	
+	}
 	arch_mcs_spin_unlock_contended(&next->locked);
 	pv_kick_node(lock, next);
 
