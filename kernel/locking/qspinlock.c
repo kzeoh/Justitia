@@ -479,18 +479,22 @@ pv_queue:
 						if(vict->weight<origin->next->weight){
 							sprev=READ_ONCE(origin);
 							vict=READ_ONCE(origin->next);
+							flag=0;
 						}
 					}else if(origin->next==NULL){
 						break;
 					}
 					origin=READ_ONCE(origin->next);
-					printk("next origin: %d\t%d\t%d\n",origin->weight,origin->locked,origin->count);
+//					printk("next origin: %d\t%d\t%d\n",origin->weight,origin->locked,origin->count);
 				}
-				printk("vict: %d\t%d\t%d\n",vict->weight,vict->locked,vict->count);
+/*				if(sprev==NULL)
+					printk("vict & origin: %d\t%d\n",vict->weight,origin->weight);*/
 
-				if(vict->weight!=origin->weight){
-					printk("vict: %d\t% %d\n",vict->weight,sprev->weight);
-					WRITE_ONCE(sprev->next,vict->next);
+//				if(vict->weight!=origin->weight&&sprev!=NULL){
+				if(!flag){
+					printk("diff vict: %d\t %d\n",vict->weight,sprev->weight);
+					flag=1;
+//					WRITE_ONCE(sprev->next,vict->next);
 //					printk("vict: %d\t%d\t%d\n",vict->weight,vict->locked,vict->count);
 					//WRITE_ONCE(vict->next,next);
 					//next=READ_ONCE(vict);
