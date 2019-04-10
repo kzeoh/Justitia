@@ -405,7 +405,7 @@ pv_queue:
 		//printk("weight: %d\n",weight);
 		node->weight = weight;
 		if(node->weight!=500&&node->weight!=1000&&node->weight>=100){
-			printk("node->weight = %d\n",node->weight);
+			//printk("node->weight = %d\n",node->weight);
 			flag=1;
 		}
 	}
@@ -465,30 +465,37 @@ pv_queue:
 		 *according to the weight priority - kwonje*/
 		if (next){
 			if(flag){
-				origin = next;
+				origin = READ_ONCE(next);
 				//temp = (origin&_Q_TAIL_MASK);
 				//origin Q_TAIL_OFFSET
-				printk("origin: %d\t%d\t%d\n",origin->weight,origin->locked,origin->count);
+				//printk("origin: %d\t%d\t%d\n",origin->weight,origin->locked,origin->count);
 //				printk("vict: %u\n",_Q_TAIL_MASK);
 				
-	/*			while(origin){
+				while(origin){
 					if(!vict){
-						vict=origin;
+						vict=READ_ONCE(origin);
 					}
-					if(origin->next)
+					if(origin->next){
 						if(vict->weight<origin->next->weight){
-							sprev=origin;
-							vict=origin->next;
+							sprev=READ_ONCE(origin);
+							vict=READ_ONCE(origin->next);
 						}
-					origin=origin->next;
+					}else if(origin->next==NULL){
+						break;
+					}
+					origin=READ_ONCE(origin->next);
+					printk("next origin: %d\t%d\t%d\n",origin->weight,origin->locked,origin->count);
 				}
-				if(vict!=origin){
-					sprev->next=vict->next;
-					vict->next=next
-					next=vict
-				}
+				printk("vict: %d\t%d\t%d\n",vict->weight,vict->locked,vict->count);
 
-*/
+				if(vict->weight!=origin->weight){
+					printk("vict: %d\t% %d\n",vict->weight,sprev->weight);
+					WRITE_ONCE(sprev->next,vict->next);
+//					printk("vict: %d\t%d\t%d\n",vict->weight,vict->locked,vict->count);
+					//WRITE_ONCE(vict->next,next);
+					//next=READ_ONCE(vict);
+				}
+				//printk("next: %d\t%d\t%d\n",next->weight,next->locked,next->count);
 			}
 			prefetchw(next);
 		}
@@ -551,12 +558,12 @@ locked:
 	 */
 	if (!next){
 		next = smp_cond_load_relaxed(&node->next, (VAL));
-		if(next&&flag){
+/*		if(next&&flag){
 			printk("next: %d\t%d\t%d\n",next->weight,next->locked,next->count);
 			origin = next;
 			//temp = (origin&_Q_TAIL_MASK);
 			//origin Q_TAIL_OFFSET
-/*			while(origin){
+			while(origin){
 				if(!vict){
 					vict=origin;
 				}
@@ -567,12 +574,14 @@ locked:
 					}
 				origin=origin->next;
 			}
+			printk("second while origin: %d\t%d\t%d\n",origin->weight,origin->locked,origin->count);
+
 			if(vict!=origin){
 				sprev->next=vict->next;
-				vict->next=next
-				next=vict
-			}*/
-		}	
+				vict->next=next;
+				next=vict;
+			}
+		}	*/
 	}
 	arch_mcs_spin_unlock_contended(&next->locked);
 	pv_kick_node(lock, next);
