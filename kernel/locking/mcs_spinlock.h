@@ -17,7 +17,9 @@
 
 struct mcs_spinlock {
 	struct mcs_spinlock *next;
-	int locked; /* 1 if lock acquired */
+	int locked;
+//	short locked; /* 1 if lock acquired */
+//	short cpu_num;
 //	int count;  /* nesting count, see qspinlock.c */
 	short count;
 	short weight;

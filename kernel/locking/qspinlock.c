@@ -308,7 +308,7 @@ static __always_inline u32  __pv_wait_head_or_lock(struct qspinlock *lock,
  */
 void queued_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 {
-	struct mcs_spinlock *prev, *next, *node, *origin, *vict=NULL,*sprev=NULL;
+	struct mcs_spinlock *prev, *next, *node, *origin, *vict=NULL,*sprev=NULL,*temp=NULL;
 	u32 old, tail;
 	int idx, weight, flag=0;
 
@@ -390,7 +390,7 @@ pv_queue:
 	tail = encode_tail(smp_processor_id(), idx);
 
 	node += idx;
-
+	
 	/*
 	 * Ensure that we increment the head node->count before initialising
 	 * the actual node. If the compiler is kind enough to reorder these
@@ -406,10 +406,15 @@ pv_queue:
 		node->weight = weight;
 		if(node->weight!=500&&node->weight!=1000&&node->weight>=100){
 			//printk("node->weight = %d\n",node->weight);
+/*			if(idx>0)
+				printk("idx: %d cpu: %d\n",idx,smp_processor_id());*/
 			flag=1;
+			node->weight+=smp_processor_id();
+			node->weight+=idx*10;
 		}
+	}else{
+		node->weight = 0 ;
 	}
-
 	node->locked = 0;
 	node->next = NULL;
 	pv_init_node(node);
@@ -465,7 +470,7 @@ pv_queue:
 		 *according to the weight priority - kwonje*/
 		if (next){
 			if(flag){
-				origin = READ_ONCE(next);
+				origin = next;
 				//temp = (origin&_Q_TAIL_MASK);
 				//origin Q_TAIL_OFFSET
 				//printk("origin: %d\t%d\t%d\n",origin->weight,origin->locked,origin->count);
@@ -473,33 +478,53 @@ pv_queue:
 				
 				while(origin){
 					if(!vict){
-						vict=READ_ONCE(origin);
+						vict=origin;
 					}
-					if(origin->next){
-						if(vict->weight<origin->next->weight){
-							sprev=READ_ONCE(origin);
-							vict=READ_ONCE(origin->next);
+					if(origin->next&&origin->next->next!=NULL){
+						if(vict->weight<origin->next->weight&&origin->next->weight!=1000){
+							sprev=origin;
+							vict=origin->next;
+/*								if(sprev->next==vict)*/
+									printk("weight: ori-%d vict-%d!\n",origin->weight,vict->weight);
 							flag=0;
 						}
 					}else if(origin->next==NULL){
 						break;
-					}
-					origin=READ_ONCE(origin->next);
-//					printk("next origin: %d\t%d\t%d\n",origin->weight,origin->locked,origin->count);
+					}/*else if(origin->next->next==NULL){
+						printk("check!\n");
+					}*/
+					origin=origin->next;
 				}
 /*				if(sprev==NULL)
 					printk("vict & origin: %d\t%d\n",vict->weight,origin->weight);*/
 
 //				if(vict->weight!=origin->weight&&sprev!=NULL){
 				if(!flag){
-					printk("diff vict: %d\t %d\n",vict->weight,sprev->weight);
+					//printk("diff vict: %d\t %d\n",vict->weight,sprev->weight);
 					flag=1;
-//					WRITE_ONCE(sprev->next,vict->next);
-//					printk("vict: %d\t%d\t%d\n",vict->weight,vict->locked,vict->count);
-					//WRITE_ONCE(vict->next,next);
-					//next=READ_ONCE(vict);
+					//	sprev->next=NULL;
+					
+						//WRITE_ONCE(sprev->next,vict->next);
+						sprev->next=vict->next;
+//						printk("changed");
+						
+//						atomic_xchg_relaxed(sprev->next,vict->next);
+					
+
+//						WRITE_ONCE(vict->next,next);
+//						atomic_xchg_relaxed(vict->next,next);
+						vict->next=next;
+//						printk("second change");
+
+//						vict->next=READ_ONCE(next);
+//						next=READ_ONCE(vict);
+//						atomic_xchg_relaxed(next,vict);
+						next=vict;
+//						printk("third change");
+
 				}
-				//printk("next: %d\t%d\t%d\n",next->weight,next->locked,next->count);
+//				printk("next: %d\n",next->weight);
+				smp_wmb();
 			}
 			prefetchw(next);
 		}
@@ -562,30 +587,61 @@ locked:
 	 */
 	if (!next){
 		next = smp_cond_load_relaxed(&node->next, (VAL));
-/*		if(next&&flag){
-			printk("next: %d\t%d\t%d\n",next->weight,next->locked,next->count);
+		if(next)
+		if(flag){
 			origin = next;
 			//temp = (origin&_Q_TAIL_MASK);
 			//origin Q_TAIL_OFFSET
+			//printk("origin: %d\t%d\t%d\n",origin->weight,origin->locked,origin->count);
+	//		printk("vict: %u\n",_Q_TAIL_MASK);
+			
 			while(origin){
 				if(!vict){
 					vict=origin;
 				}
-				if(origin->next)
-					if(vict->weight<origin->next->weight){
+				if(origin->next&&origin->next->next!=NULL){
+					if(vict->weight<origin->next->weight&&origin->next->weight!=1000){
 						sprev=origin;
 						vict=origin->next;
+//							if(sprev->next==vict)
+						printk("weight: ori-%d vict-%d!\n",origin->weight,vict->weight);
+						flag=0;
 					}
+				}else if(origin->next==NULL){
+					break;
+				}/*else if(origin->next->next==NULL){
+					printk("check\n");
+				}*/
 				origin=origin->next;
 			}
-			printk("second while origin: %d\t%d\t%d\n",origin->weight,origin->locked,origin->count);
-
-			if(vict!=origin){
+	/*		if(sprev==NULL)
+				printk("vict & origin: %d\t%d\n",vict->weight,origin->weight);*/
+	//		if(vict->weight!=origin->weight&&sprev!=NULL){
+			if(!flag){
+				//printk("diff vict: %d\t %d\n",vict->weight,sprev->weight);
+				
+				//	sprev->next=NULL;
+				
+				//WRITE_ONCE(sprev->next,vict->next);
 				sprev->next=vict->next;
+	//			printk("changed");
+				
+	//			atomic_xchg_relaxed(sprev->next,vict->next);
+			
+	//			WRITE_ONCE(vict->next,next);
+	//			atomic_xchg_relaxed(vict->next,next);
 				vict->next=next;
+	//			printk("second change");
+	//			vict->next=READ_ONCE(next);
+	//			next=READ_ONCE(vict);
+	//			atomic_xchg_relaxed(next,vict);
 				next=vict;
+	//			printk("third change");
 			}
-		}	*/
+	//		printk("next: %d\n",next->weight);
+			smp_wmb();
+		}
+
 	}
 	arch_mcs_spin_unlock_contended(&next->locked);
 	pv_kick_node(lock, next);
