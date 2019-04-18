@@ -15,6 +15,12 @@
 
 #include <asm/mcs_spinlock.h>
 
+/* 
+ * Commented by Jonggyu
+ * mcs_spinlock structure has been modified to contain io weight of each container
+ * Since the size of this structure cannot be modified manually due to technical issues, 
+ * we have changed long int (64 bits) to short int (32 bits) for the count variable
+ */
 struct mcs_spinlock {
 	struct mcs_spinlock *next;
 	int locked;
