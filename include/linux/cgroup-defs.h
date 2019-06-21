@@ -342,8 +342,11 @@ struct cgroup {
 	int max_depth;
 
 	/*added weight variable on cgroup struct kwonje*/
+	int ratio;
 	int weight;
-
+	int	nr_pages;
+	int total_weight;	
+	
 	/*
 	 * Keep track of total numbers of visible and dying descent cgroups.
 	 * Dying cgroups are cgroups which were deleted by a user,

@@ -1101,6 +1101,7 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 	unsigned nr_immediate = 0;
 	unsigned nr_ref_keep = 0;
 	unsigned nr_unmap_fail = 0;
+	int page_num, ratio;
 
 	cond_resched();
 
@@ -1108,8 +1109,11 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 		struct address_space *mapping;
 		struct page *page;
 		int may_enter_fs;
+		long long target;
+		long long base;
 		enum page_references references = PAGEREF_RECLAIM_CLEAN;
 		bool dirty, writeback;
+		unsigned long nr_pages;
 
 		cond_resched();
 
@@ -1418,6 +1422,32 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 					 * leave it off the LRU).
 					 */
 					nr_reclaimed++;
+					/*decrease the nr_pages if page is evicted kwonje*/
+					if(page_is_file_cache(page)){
+						/*if(page->weight == 100){
+							atomic_dec(&pgdat->nr_pages_100);			
+						}else if(page->weight == 200){
+								atomic_dec(&pgdat->nr_pages_200);	
+						}else if(page->weight == 300){
+							atomic_dec(&pgdat->nr_pages_300);	
+						}else if(page->weight == 400){
+							atomic_dec(&pgdat->nr_pages_400);	
+						}else if(page->weight == 501){
+							atomic_dec(&pgdat->nr_pages_500);	
+						}else if(page->weight == 600){
+							atomic_dec(&pgdat->nr_pages_600);	
+						}else if(page->weight == 700){
+							atomic_dec(&pgdat->nr_pages_700);	
+						}else if(page->weight == 800){
+							atomic_dec(&pgdat->nr_pages_800);	
+						}else if(page->weight == 900){
+							atomic_dec(&pgdat->nr_pages_900);	
+						}*/
+						if(page->weight>=100&&page->weight!=500&&page->weight!=1000)
+							*page->nr_pages-=1;
+					}
+						
+					
 					continue;
 				}
 			}
@@ -1436,6 +1466,95 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 			count_memcg_page_event(page, PGLAZYFREED);
 		} else if (!mapping || !__remove_mapping(mapping, page, true))
 			goto keep_locked;
+
+		/*adjust the proportional number of remaining pages in the page cache kwonje*/
+		
+/*		if(current_is_kswapd()&&page->weight>100&&page_is_file_cache(page)){
+			//if(task_css_set(current)->subsys[3]!=NULL)		
+			//	printk("kswapd id: %d\n",task_css_set(current)->subsys[3]->id);
+			//base = atomic_read(&pgdat->nr_pages_100);
+			if(page->weight!=500&&page->weight!=1000){
+				nr_pages = node_page_state(pgdat,NR_FILE_PAGES);
+				page_num=*page->nr_pages;
+				ratio=*page->ratio;
+				if(ratio>80)
+					ratio=80;
+				if(page_num<ratio/100*nr_pages){
+					//printk("num:%d, ratio:%d\n",page_num,ratio);
+//					page->weight=101;
+					goto keep_locked;
+				}
+			}*/
+/*
+			if(page->weight == 200){
+				target=atomic_read(&pgdat->nr_pages_200);
+				if(target/base<2&&target<=nr_pages/10*2){
+				if(target<=nr_pages/15*2){
+				if(target/base<2&&target <=500000){
+//					printk("2. target: %lld and base: %lld and num of file pages: %lud\n",target,base,nr_pages);
+					goto keep_locked;
+				}
+			}else if(page->weight == 300){
+				target=atomic_read(&pgdat->nr_pages_300);
+
+				if(target/base<3&&target<=nr_pages/10*3){
+//				if(target<=nr_pages/15*5){
+//				if(target/base<4&&target<=1000000){
+					//printk("4. target: %lld and base: %lld\n",target,base);
+					goto keep_locked;
+				}
+
+			}else if(page->weight == 400){
+				target=atomic_read(&pgdat->nr_pages_400);
+
+				if(target/base<4&&target<=nr_pages/10*4){
+//				if(target<=nr_pages/15*5){
+//				if(target/base<4&&target<=1000000){
+					//printk("4. target: %lld and base: %lld\n",target,base);
+					goto keep_locked;
+				}
+
+			}*//*else if(page->weight == 501){
+				target=atomic_read(&pgdat->nr_pages_500);
+
+				if(target/base<4&&target<=nr_pages/36*5){
+//				if(target<=nr_pages/15*5){
+//				if(target/base<4&&target<=1000000){
+					//printk("4. target: %lld and base: %lld\n",target,base);
+					goto keep_locked;
+				}
+
+			}else if(page->weight == 600){
+				target=atomic_read(&pgdat->nr_pages_600);
+
+				if(target/base<4&&target<=nr_pages/36*6){
+//				if(target<=nr_pages/15*5){
+//				if(target/base<4&&target<=1000000){
+					//printk("4. target: %lld and base: %lld\n",target,base);
+					goto keep_locked;
+				}
+
+			}else if(page->weight == 700){
+				target=atomic_read(&pgdat->nr_pages_700);
+
+				if(target/base<4&&target<=nr_pages/36*7){
+//				if(target<=nr_pages/15*5){
+//				if(target/base<4&&target<=1000000){
+					//printk("4. target: %lld and base: %lld\n",target,base);
+					goto keep_locked;
+				}
+
+			}else if(page->weight == 800){
+				target=atomic_read(&pgdat->nr_pages_800);
+//				if(target<=nr_pages/15*8){
+				if(target/base<8&&target<=nr_pages/15*8){
+//				if(target/base<8&&target<=2000000){
+//					printk("8. target: %lld and base: %lld and num of file pages: %lud\n",target,base,nr_pages);
+					goto keep_locked;
+				}
+			}*/
+			
+	//	}
 		/*
 		 * At this point, we have no other references and there is
 		 * no way to pick any more up (removed from LRU, removed
@@ -1446,7 +1565,33 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 		__ClearPageLocked(page);
 free_it:
 		nr_reclaimed++;
+	
+		/*kwonje*/
+		if(page_is_file_cache(page)){
+/*			if(page->weight == 100){
+				atomic_dec(&pgdat->nr_pages_100);			
+			}else if(page->weight == 200){
+				atomic_dec(&pgdat->nr_pages_200);	
+			}else if(page->weight == 300){
+				atomic_dec(&pgdat->nr_pages_300);	
+			}else if(page->weight == 400){
+				atomic_dec(&pgdat->nr_pages_400);	
+			}else if(page->weight == 501){
+				atomic_dec(&pgdat->nr_pages_500);	
+			}else if(page->weight == 600){
+				atomic_dec(&pgdat->nr_pages_600);	
+			}else if(page->weight == 700){
+				atomic_dec(&pgdat->nr_pages_700);	
+			}else if(page->weight == 800){
+				atomic_dec(&pgdat->nr_pages_800);	
+			}else if(page->weight == 900){
+				atomic_dec(&pgdat->nr_pages_900);	
+			}*/
+			if(page->weight>=100&&page->weight!=1000&&page->weight!=500)
+				*page->nr_pages-=1;
+		}
 
+	
 		/*
 		 * Is there need to periodically free_page_list? It would
 		 * appear not as the counts should be low

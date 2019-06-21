@@ -218,6 +218,7 @@ static struct cgroup_subsys_state *css_create(struct cgroup *cgrp,
 					      struct cgroup_subsys *ss);
 static void css_release(struct percpu_ref *ref);
 static void kill_css(struct cgroup_subsys_state *css);
+static void traverse_css_weight(struct cgroup_subsys_state *pos, struct cgroup_subsys_state *parent);
 static int cgroup_addrm_files(struct cgroup_subsys_state *css,
 			      struct cgroup *cgrp, struct cftype cfts[],
 			      bool is_add);
@@ -2287,6 +2288,7 @@ struct task_struct *cgroup_taskset_next(struct cgroup_taskset *tset,
  * guarantees that either all or none of the tasks in @mgctx are migrated.
  * @mgctx is consumed regardless of success.
  */
+/*kwonje check this out*/
 static int cgroup_migrate_execute(struct cgroup_mgctx *mgctx)
 {
 	struct cgroup_taskset *tset = &mgctx->tset;
@@ -4769,6 +4771,7 @@ static void offline_css(struct cgroup_subsys_state *css)
  * css is online and installed in @cgrp.  This function doesn't create the
  * interface files.  Returns 0 on success, -errno on failure.
  */
+/*kwonje css_create*/
 static struct cgroup_subsys_state *css_create(struct cgroup *cgrp,
 					      struct cgroup_subsys *ss)
 {
@@ -4812,7 +4815,9 @@ static struct cgroup_subsys_state *css_create(struct cgroup *cgrp,
 			pr_warn("\"memory\" requires setting use_hierarchy to 1 on the root\n");
 		ss->warned_broken_hierarchy = true;
 	}
-
+	/*kwonje*/
+	if(cgrp->weight!=0)
+		printk("css id: %d\n",css->id);
 	return css;
 
 err_list_del:
@@ -5054,8 +5059,23 @@ static void css_killed_ref_fn(struct percpu_ref *ref)
  */
 static void kill_css(struct cgroup_subsys_state *css)
 {
+	struct cgroup_subsys_state *next, *parent;
+	
+	
 	lockdep_assert_held(&cgroup_mutex);
+	printk("dying css weight: %d id: %d cgrp id: %d\n",css->cgroup->weight,css->id, css->cgroup->id);
+	
+	if(css->cgroup->weight!=0&&css->parent != NULL){
+		parent= css->parent;
+		parent->cgroup->total_weight-=css->cgroup->weight;
+		printk("dying-parent weight:%d %d, id: %d cgrp id: %d\n",parent->cgroup->weight,parent->parent->cgroup->weight,parent->id,parent->cgroup->id);
+		css->cgroup->weight=0;
+		traverse_css_weight(next,parent);
 
+	}	
+
+	
+	
 	if (css->flags & CSS_DYING)
 		return;
 
@@ -5084,6 +5104,31 @@ static void kill_css(struct cgroup_subsys_state *css)
 	 * css is confirmed to be seen as killed on all CPUs.
 	 */
 	percpu_ref_kill_and_confirm(&css->refcnt, css_killed_ref_fn);
+}
+
+/*kwonje*/
+
+static void traverse_css_weight(struct cgroup_subsys_state *pos, struct cgroup_subsys_state *parent){
+	
+	struct cgroup_subsys_state *next;
+	
+	
+	css_for_each_child(pos,parent){
+		if(pos->cgroup->weight==0)
+			continue;
+		pos->cgroup->ratio = parent -> cgroup -> ratio * pos -> cgroup -> weight / parent -> cgroup->total_weight;
+		printk("dying-sibling weight: %d id: %d ratio: %d\n",pos->cgroup->weight,pos->id,pos->cgroup->ratio);
+		if((next=css_next_child(NULL,pos))!=NULL){
+			traverse_css_weight(next,pos);
+		}
+
+	}
+/*	list_for_each_entry_rcu(next,&parent->children,sibling){
+		next->cgroup->ratio = parent -> cgroup->ratio*next->cgroup->weight / parent->cgroup_total_weight;
+		if(css_next_child(NULL,next))
+			traverse_css(next
+		if(list_entry_rcu(&panext->cgroup->,)
+	}*/
 }
 
 /**
@@ -5646,6 +5691,7 @@ void cgroup_post_fork(struct task_struct *child)
  * init_css_set refcnting.  init_css_set never goes away and we can't race
  * with migration path - PF_EXITING is visible to migration path.
  */
+/*kwonje check this out!*/
 void cgroup_exit(struct task_struct *tsk)
 {
 	struct cgroup_subsys *ss;
@@ -5994,3 +6040,5 @@ static int __init cgroup_sysfs_init(void)
 }
 subsys_initcall(cgroup_sysfs_init);
 #endif /* CONFIG_SYSFS */
+
+

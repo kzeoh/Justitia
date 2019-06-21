@@ -36,6 +36,7 @@
 #include <linux/cleancache.h>
 #include <linux/shmem_fs.h>
 #include <linux/rmap.h>
+#include <linux/mm_inline.h>
 #include "internal.h"
 
 #define CREATE_TRACE_POINTS
@@ -1536,6 +1537,7 @@ struct page *pagecache_get_page(struct address_space *mapping, pgoff_t offset,
 	int fgp_flags, gfp_t gfp_mask)
 {
 	struct page *page;
+	int weight;
 
 repeat:
 	page = find_get_entry(mapping, offset);
@@ -1593,7 +1595,29 @@ no_page:
 				goto repeat;
 		}
 	}
+	/*Found Page kwonje*/
+	/*if(page_is_file_cache(page))*/
+	if(current->pid > 2000)
+	if(page)
+		if(task_css_set(current)->subsys[3]!=NULL){	
+			weight = task_css_set(current)->subsys[3]->cgroup->weight;
+			//printk("print page:%d\n",page->weight);	
+		if(page->weight>=100&&weight>=100&&weight!=500&&weight!=1000){
+//			printk("print page:%d cgroup: %d\n",page->weight,weight);	
 
+			if(page->weight!=weight){
+//			printk("afoundpage-cgrp we:%d, ratio:%d, nr:%d page we:%d, nr:%d",weight,task_css_set(current)->subsys[3]->cgroup->ratio,task_css_set(current)->subsys[3]->cgroup->nr_pages,page->weight,*page->nr_pages);
+			*page->nr_pages-=1;
+			page->ratio=&task_css_set(current)->subsys[3]->cgroup->ratio;
+			page->weight = task_css_set(current)->subsys[3]->cgroup->weight;
+			page->nr_pages=&task_css_set(current)->subsys[3]->cgroup->nr_pages;
+			task_css_set(current)->subsys[3]->cgroup->nr_pages+=1;
+//			printk("bfoundpage-cgrp we:%d, ratio:%d, nr:%d page we:%d, nr:%d",weight,task_css_set(current)->subsys[3]->cgroup->ratio,task_css_set(current)->subsys[3]->cgroup->nr_pages,page->weight,*page->nr_pages);
+
+			}	
+			}
+		}
+		
 	return page;
 }
 EXPORT_SYMBOL(pagecache_get_page);
@@ -2084,8 +2108,10 @@ find_page:
 			error = -EINTR;
 			goto out;
 		}
-
+		/*read timestamp kwonje*/
 		page = find_get_page(mapping, index);
+/*		if(strcmp(current->comm,"filebench")==0)
+			printk("read cache start\n");*/
 		if (!page) {
 			if (iocb->ki_flags & IOCB_NOWAIT)
 				goto would_block;
@@ -2101,6 +2127,8 @@ find_page:
 					ra, filp, page,
 					index, last_index - index);
 		}
+/*		if(strcmp(current->comm,"filebench")==0)
+			printk("read cache end!\n");*/
 		if (!PageUptodate(page)) {
 			if (iocb->ki_flags & IOCB_NOWAIT) {
 				put_page(page);

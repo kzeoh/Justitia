@@ -1262,10 +1262,16 @@ static int ext4_write_begin(struct file *file, struct address_space *mapping,
 	index = pos >> PAGE_SHIFT;
 	from = pos & (PAGE_SIZE - 1);
 	to = from + len;
-
+	
+/*	if(strcmp(current->comm,"filebench")==0)
+		printk("write_begin\n");*/
+	
+	/*timestamp for inline kwonje*/
 	if (ext4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA)) {
+//		printk("inline start\n");
 		ret = ext4_try_to_write_inline_data(mapping, inode, pos, len,
 						    flags, pagep);
+//		printk("inline end\n");
 		if (ret < 0)
 			return ret;
 		if (ret == 1)
@@ -1304,18 +1310,30 @@ retry_journal:
 	wait_for_stable_page(page);
 
 #ifdef CONFIG_EXT4_FS_ENCRYPTION
-	if (ext4_should_dioread_nolock(inode))
+	if (ext4_should_dioread_nolock(inode)){
+//		printk("write start\n");
 		ret = ext4_block_write_begin(page, pos, len,
 					     ext4_get_block_unwritten);
-	else
+//		printk("write end\n");
+	}
+	else{
+//		printk("write start\n");
 		ret = ext4_block_write_begin(page, pos, len,
 					     ext4_get_block);
+//		printk("write end\n");
+	}
 #else
-	if (ext4_should_dioread_nolock(inode))
+	if (ext4_should_dioread_nolock(inode)){
+//		printk("write start\n");
 		ret = __block_write_begin(page, pos, len,
 					  ext4_get_block_unwritten);
-	else
+//		printk("write end\n");
+	}
+	else{
+//		printk("write start\n");
 		ret = __block_write_begin(page, pos, len, ext4_get_block);
+//		printk("write end");
+	}
 #endif
 	if (!ret && ext4_should_journal_data(inode)) {
 		ret = ext4_walk_page_buffers(handle, page_buffers(page),
@@ -3017,6 +3035,10 @@ static int ext4_da_write_begin(struct file *file, struct address_space *mapping,
 		return -EIO;
 
 	index = pos >> PAGE_SHIFT;
+	
+/*	if(strcmp(current->comm,"filebench")==0)
+		printk("da_write\n");	*/
+
 
 	if (ext4_nonda_switch(inode->i_sb) ||
 	    S_ISLNK(inode->i_mode)) {
@@ -3028,9 +3050,15 @@ static int ext4_da_write_begin(struct file *file, struct address_space *mapping,
 	trace_ext4_da_write_begin(inode, pos, len, flags);
 
 	if (ext4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA)) {
+/*		if(strcmp(current->comm,"filebench")==0)
+			printk("inline write begin\n");*/
+
 		ret = ext4_da_write_inline_data_begin(mapping, inode,
 						      pos, len, flags,
 						      pagep, fsdata);
+/*		if(strcmp(current->comm,"filebench")==0)
+			printk("inline write end\n");*/
+
 		if (ret < 0)
 			return ret;
 		if (ret == 1)
@@ -3076,10 +3104,22 @@ retry_journal:
 	wait_for_stable_page(page);
 
 #ifdef CONFIG_EXT4_FS_ENCRYPTION
+/*	if(strcmp(current->comm,"filebench")==0)
+		printk("write begin\n");*/
+	
 	ret = ext4_block_write_begin(page, pos, len,
 				     ext4_da_get_block_prep);
+/*	if(strcmp(current->comm,"filebench")==0)
+		printk("write end\n");*/
+
 #else
+/*	if(strcmp(current->comm,"filebench")==0)
+		printk("write begin\n");*/
+
 	ret = __block_write_begin(page, pos, len, ext4_da_get_block_prep);
+/*	if(strcmp(current->comm,"filebench")==0)
+		printk("write end\n");*/
+
 #endif
 	if (ret < 0) {
 		unlock_page(page);

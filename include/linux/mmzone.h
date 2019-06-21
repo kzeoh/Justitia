@@ -708,6 +708,17 @@ typedef struct pglist_data {
 	unsigned long		flags;
 
 	ZONE_PADDING(_pad2_)
+	
+	/*added counter value for weighted page kwonje*/
+	atomic_t nr_pages_100;
+	atomic_t nr_pages_200;
+	atomic_t nr_pages_300;
+	atomic_t nr_pages_400;
+	atomic_t nr_pages_500;
+	atomic_t nr_pages_600;
+	atomic_t nr_pages_700;
+	atomic_t nr_pages_800;
+	atomic_t nr_pages_900;
 
 	/* Per-node vmstats */
 	struct per_cpu_nodestat __percpu *per_cpu_nodestats;

@@ -3274,6 +3274,7 @@ get_page_from_freelist(gfp_t gfp_mask, unsigned int order, int alloc_flags,
 	struct zoneref *z = ac->preferred_zoneref;
 	struct zone *zone;
 	struct pglist_data *last_pgdat_dirty_limit = NULL;
+	struct cgroup *cgrp;
 
 	/*
 	 * Scan zonelist, looking for a zone with enough free.
@@ -3283,6 +3284,7 @@ get_page_from_freelist(gfp_t gfp_mask, unsigned int order, int alloc_flags,
 								ac->nodemask) {
 		struct page *page;
 		unsigned long mark;
+		int weight;
 
 		if (cpusets_enabled() &&
 			(alloc_flags & ALLOC_CPUSET) &&
@@ -3371,6 +3373,49 @@ try_this_zone:
 			 */
 			if (unlikely(order && (alloc_flags & ALLOC_HARDER)))
 				reserve_highatomic_pageblock(page, zone, order);
+
+			/*allocation count record kwonje*/
+			if(page_is_file_cache(page))
+				if(current->pid > 2000){
+					if(task_css_set(current)->subsys[3]!=NULL){
+						weight=task_css_set(current)->subsys[3]->cgroup->weight;
+						if(weight >= 100 && weight !=500 && weight != 1000){
+							cgrp = task_css_set(current)->subsys[3]->cgroup;
+//							printk("parent subsys of %d-%d: %d\n",weight, task_css_set(current)->subsys[3]->id, task_css_set(current)->subsys[3]->parent->id);
+//						if(task_css_set(current)->subsys[3]->parent->parent!=NULL)
+//							printk("parent of parent of subsys of %d-%d:\n",weight, task_css_set(current)->subsys[3]->parent->parent->id);
+							/*if(weight == 100){
+								atomic_inc(&zone->zone_pgdat->nr_pages_100);
+							}else if(weight == 200){
+								atomic_inc(&zone->zone_pgdat->nr_pages_200);
+							}else if(weight == 300){
+								atomic_inc(&zone->zone_pgdat->nr_pages_300);
+							}else if(weight == 400){
+								atomic_inc(&zone->zone_pgdat->nr_pages_400);
+							}else if(weight == 501){
+								atomic_inc(&zone->zone_pgdat->nr_pages_500);
+							}else if(weight == 600){
+								atomic_inc(&zone->zone_pgdat->nr_pages_600);
+							}else if(weight == 700){
+								atomic_inc(&zone->zone_pgdat->nr_pages_700);
+							}else if(weight == 800){
+								atomic_inc(&zone->zone_pgdat->nr_pages_800);
+							}else if(weight == 900){
+								atomic_inc(&zone->zone_pgdat->nr_pages_900);
+							}*/
+							page->weight = weight;
+							
+								
+							page->nr_pages = &cgrp->nr_pages;
+							page->ratio = &cgrp->ratio;
+							//printk("before alloc-page-cgrp id:%d, nr-pages:%d, ratio%d \n",cgrp->id,*page->nr_pages,*page->ratio);
+							cgrp->nr_pages++;
+							//printk("after alloc-page-cgrp id:%d, nr-pages:%d, ratio%d \n",cgrp->id,*page->nr_pages,*page->ratio);
+
+							
+						}
+					}
+				}	
 
 			return page;
 		} else {

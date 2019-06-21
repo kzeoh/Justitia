@@ -488,6 +488,8 @@ CFQG_FLAG_FNS(idling)
 CFQG_FLAG_FNS(empty)
 #undef CFQG_FLAG_FNS
 
+
+
 /* This should be called with the queue_lock held. */
 static void cfqg_stats_update_group_wait_time(struct cfqg_stats *stats)
 {
@@ -1525,6 +1527,7 @@ static void cfq_init_cfqg_base(struct cfq_group *cfqg)
 }
 
 #ifdef CONFIG_CFQ_GROUP_IOSCHED
+static void traverse_css_weight(struct cgroup_subsys_state *pos, struct cgroup_subsys_state *parent);
 static int __cfq_set_weight(struct cgroup_subsys_state *css, u64 val,
 			    bool on_dfl, bool reset_dev, bool is_leaf_weight);
 
@@ -1816,7 +1819,19 @@ static ssize_t cfqg_set_leaf_weight_device(struct kernfs_open_file *of,
 {
 	return __cfqg_set_weight_device(of, buf, nbytes, off, false, true);
 }
+/*kwonje*/
+static void traverse_css_weight(struct cgroup_subsys_state *pos, struct cgroup_subsys_state *parent){
+	struct cgroup_subsys_state *next;
+	
+	css_for_each_child(pos,parent){
+		pos->cgroup->ratio=parent->cgroup->ratio*pos->cgroup->weight / parent->cgroup->total_weight;
+		printk("sibling weight: %d id: %d ratio:%d\n",pos->cgroup->weight,pos->id,pos->cgroup->ratio);
 
+		if((next=css_next_child(NULL,pos))!=NULL)
+			traverse_css_weight(next,pos);
+		
+	}
+}
 static int __cfq_set_weight(struct cgroup_subsys_state *css, u64 val,
 			    bool on_dfl, bool reset_dev, bool is_leaf_weight)
 {
@@ -1825,7 +1840,9 @@ static int __cfq_set_weight(struct cgroup_subsys_state *css, u64 val,
 	struct blkcg *blkcg = css_to_blkcg(css);
 	struct blkcg_gq *blkg;
 	struct cfq_group_data *cfqgd;
+	struct cgroup_subsys_state *next, *parent;
 	int ret = 0;
+	int total=0;
 
 	if (val < min || val > max)
 		return -ERANGE;
@@ -1843,7 +1860,35 @@ static int __cfq_set_weight(struct cgroup_subsys_state *css, u64 val,
 		cfqgd->leaf_weight = val;
 	
 	/*adding blkio weight to the cgroup value kwonje*/
+	
 	css->cgroup->weight = val;
+	printk("setting weight: %lld, id:%d cgrp id:%d\n",val, css->id, css->cgroup->id);
+	
+	if(css->parent != NULL){
+		parent = css->parent;
+		parent->cgroup->total_weight+=val;
+		total = parent->cgroup->total_weight;
+		printk("parent weight:%d %d, id: %d cgrp id: %d\n",parent->cgroup->weight, parent->parent->cgroup->weight, parent->id,parent->cgroup->id);
+		if(parent->cgroup->weight==0 && parent->cgroup->ratio==0)
+			parent->cgroup->ratio = parent->parent->cgroup->ratio;
+	//next = css_next_child(css,css->parent);
+		traverse_css_weight(next,parent);
+/*
+		list_for_each_entry_rcu(next,&parent->children,sibling){
+			next->cgroup->ratio = parent->cgroup->ratio*next->cgroup->weight / total ;
+			printk("sibling weight: %d id: %d ratio:%d\n",next->cgroup->weight,next->id,next->cgroup->ratio);
+		}*/
+		/*
+		for(;next->;){
+
+		}
+		*/
+
+	}else{
+		css->cgroup->ratio = 100;
+	}
+
+	
 
 	hlist_for_each_entry(blkg, &blkcg->blkg_list, blkcg_node) {
 		struct cfq_group *cfqg = blkg_to_cfqg(blkg);

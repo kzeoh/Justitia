@@ -309,8 +309,8 @@ static __always_inline u32  __pv_wait_head_or_lock(struct qspinlock *lock,
 void queued_spin_lock_slowpath(struct qspinlock *lock, u32 val)
 {
 	struct mcs_spinlock *prev, *next, *node, *origin, *vict=NULL,*sprev=NULL,*temp=NULL;
-	u32 old, tail;
-	int idx, weight, flag=0;
+	u32 old, tail,ntail;
+	int idx, weight, flag=0,tinfo=0;
 
 	BUILD_BUG_ON(CONFIG_NR_CPUS >= (1U << _Q_TAIL_CPU_BITS));
 
@@ -408,12 +408,17 @@ pv_queue:
 			//printk("node->weight = %d\n",node->weight);
 /*			if(idx>0)
 				printk("idx: %d cpu: %d\n",idx,smp_processor_id());*/
+			if(node->weight==501)
+				node->weight=500;
 			flag=1;
-			node->weight+=smp_processor_id();
-			node->weight+=idx*10;
 		}
+		node->weight+=smp_processor_id();
+		node->weight+=idx*10;
+		//printk("weight: %d\n",node->weight);
+
 	}else{
-		node->weight = 0 ;
+		node->weight+=smp_processor_id();
+		node->weight+=idx*10;
 	}
 	node->locked = 0;
 	node->next = NULL;
@@ -468,66 +473,10 @@ pv_queue:
 		/*we're out of the local spinning lock and tries to get main 
 		 *lock(q-spinlock). Therefore, we tries to set the next node 
 		 *according to the weight priority - kwonje*/
-		if (next){
-			if(flag){
-				origin = next;
-				//temp = (origin&_Q_TAIL_MASK);
-				//origin Q_TAIL_OFFSET
-				//printk("origin: %d\t%d\t%d\n",origin->weight,origin->locked,origin->count);
-//				printk("vict: %u\n",_Q_TAIL_MASK);
-				
-				while(origin){
-					if(!vict){
-						vict=origin;
-					}
-					if(origin->next&&origin->next->next!=NULL){
-						if(vict->weight<origin->next->weight&&origin->next->weight!=1000){
-							sprev=origin;
-							vict=origin->next;
-/*								if(sprev->next==vict)*/
-									printk("weight: ori-%d vict-%d!\n",origin->weight,vict->weight);
-							flag=0;
-						}
-					}else if(origin->next==NULL){
-						break;
-					}/*else if(origin->next->next==NULL){
-						printk("check!\n");
-					}*/
-					origin=origin->next;
-				}
-/*				if(sprev==NULL)
-					printk("vict & origin: %d\t%d\n",vict->weight,origin->weight);*/
 
-//				if(vict->weight!=origin->weight&&sprev!=NULL){
-				if(!flag){
-					//printk("diff vict: %d\t %d\n",vict->weight,sprev->weight);
-					flag=1;
-					//	sprev->next=NULL;
-					
-						//WRITE_ONCE(sprev->next,vict->next);
-						sprev->next=vict->next;
-//						printk("changed");
-						
-//						atomic_xchg_relaxed(sprev->next,vict->next);
-					
+		prefetchw(next);
 
-//						WRITE_ONCE(vict->next,next);
-//						atomic_xchg_relaxed(vict->next,next);
-						vict->next=next;
-//						printk("second change");
-
-//						vict->next=READ_ONCE(next);
-//						next=READ_ONCE(vict);
-//						atomic_xchg_relaxed(next,vict);
-						next=vict;
-//						printk("third change");
-
-				}
-//				printk("next: %d\n",next->weight);
-				smp_wmb();
-			}
-			prefetchw(next);
-		}
+		
 	}
 
 	/*
@@ -587,61 +536,106 @@ locked:
 	 */
 	if (!next){
 		next = smp_cond_load_relaxed(&node->next, (VAL));
-		if(next)
-		if(flag){
+/*		if(next)
+		if(flag&&next->weight<1000){
 			origin = next;
-			//temp = (origin&_Q_TAIL_MASK);
-			//origin Q_TAIL_OFFSET
-			//printk("origin: %d\t%d\t%d\n",origin->weight,origin->locked,origin->count);
-	//		printk("vict: %u\n",_Q_TAIL_MASK);
 			
 			while(origin){
 				if(!vict){
 					vict=origin;
 				}
 				if(origin->next&&origin->next->next!=NULL){
-					if(vict->weight<origin->next->weight&&origin->next->weight!=1000){
+					if(vict->weight/100<origin->next->weight/100&&origin->next->weight<1000){
 						sprev=origin;
 						vict=origin->next;
-//							if(sprev->next==vict)
-						printk("weight: ori-%d vict-%d!\n",origin->weight,vict->weight);
+					//	printk("weight: ori-%d vict-%d!\n",origin->weight,vict->weight);
 						flag=0;
 					}
 				}else if(origin->next==NULL){
 					break;
-				}/*else if(origin->next->next==NULL){
-					printk("check\n");
-				}*/
+				}
 				origin=origin->next;
 			}
-	/*		if(sprev==NULL)
-				printk("vict & origin: %d\t%d\n",vict->weight,origin->weight);*/
-	//		if(vict->weight!=origin->weight&&sprev!=NULL){
 			if(!flag){
-				//printk("diff vict: %d\t %d\n",vict->weight,sprev->weight);
-				
-				//	sprev->next=NULL;
-				
-				//WRITE_ONCE(sprev->next,vict->next);
 				sprev->next=vict->next;
-	//			printk("changed");
-				
-	//			atomic_xchg_relaxed(sprev->next,vict->next);
-			
-	//			WRITE_ONCE(vict->next,next);
-	//			atomic_xchg_relaxed(vict->next,next);
 				vict->next=next;
-	//			printk("second change");
-	//			vict->next=READ_ONCE(next);
-	//			next=READ_ONCE(vict);
-	//			atomic_xchg_relaxed(next,vict);
 				next=vict;
-	//			printk("third change");
+				smp_wmb();
 			}
-	//		printk("next: %d\n",next->weight);
-			smp_wmb();
-		}
+		}*/
 
+	}
+	if (next){
+			if(flag&&next->weight<1000){
+				origin = next;
+				smp_wmb();	
+				while(origin){
+					if(!vict){
+						vict=origin;
+					}
+				//	printk("in queue: %d\n",origin->weight);
+					if(origin->next&&origin->next->next){
+/*					if(origin->next){*/
+						if(vict->weight/100<origin->next->weight/100&&origin->next->weight<1000){
+							sprev=origin;
+							vict=origin->next;
+//							printk("weight: ori-%d vict-%d!\n",origin->weight,vict->weight);
+					/*		if(origin->next->next==NULL)
+								flag=1;
+							else*/
+								flag=0;
+						}
+					}else if(origin->next==NULL){
+						break;
+					}/*else if(origin->next->next==NULL){
+						if(vict->weight/100<origin->next->weight/100&&origin->next->weight<1000)
+							flag=1;
+					}*/
+					origin=origin->next;
+				}
+//				printk("out of loop\n");
+				smp_wmb();
+
+				if(!flag){
+					/*if(vict->next==NULL){
+//						printk("tail!\n");
+						tinfo=sprev->weight/10;
+						ntail=encode_tail(sprev->weight%10,tinfo%10);
+						flag=1;
+					}*/
+					smp_wmb();
+//					printk("linking!");
+		
+					next->weight+=100;
+					sprev->next=vict->next;
+//					WRITE_ONCE(sprev->next,vict->next);
+//					printk("link1");
+					smp_wmb();
+		/*			if(flag){
+						old=xchg_tail(lock,ntail);
+						next->weight+=100;
+//						printk("changed");
+					}*/
+//					atomic_xchg_relaxed(sprev->next,vict->next);
+					smp_wmb();
+					WRITE_ONCE(vict->next,next);
+//					atomic_xchg_relaxed(vict->next,next);
+//					vict->next=next;
+//					printk("link2");
+					smp_wmb();
+//					vict->next=READ_ONCE(next);
+					next=READ_ONCE(vict);
+//					atomic_xchg_relaxed(next,vict);
+//					next=vict;
+//					printk("link3");
+				
+				}
+				smp_wmb();
+				
+//				printk("next: %d\n",next->weight);
+//				smp_wmb();
+				
+			}		
 	}
 	arch_mcs_spin_unlock_contended(&next->locked);
 	pv_kick_node(lock, next);
