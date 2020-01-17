@@ -1819,7 +1819,7 @@ static ssize_t cfqg_set_leaf_weight_device(struct kernfs_open_file *of,
 {
 	return __cfqg_set_weight_device(of, buf, nbytes, off, false, true);
 }
-/*kwonje*/
+/*kwonje & YIEOM*/
 static void traverse_css_weight(struct cgroup_subsys_state *pos, struct cgroup_subsys_state *parent){
 	struct cgroup_subsys_state *next;
 	
