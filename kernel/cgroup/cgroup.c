@@ -5065,13 +5065,13 @@ static void kill_css(struct cgroup_subsys_state *css)
 	lockdep_assert_held(&cgroup_mutex);
 	printk("dying css weight: %d id: %d cgrp id: %d\n",css->cgroup->weight,css->id, css->cgroup->id);
 	
+	/* kwonje */
 	if(css->cgroup->weight!=0&&css->parent != NULL){
 		parent= css->parent;
 		parent->cgroup->total_weight-=css->cgroup->weight;
 		printk("dying-parent weight:%d %d, id: %d cgrp id: %d\n",parent->cgroup->weight,parent->parent->cgroup->weight,parent->id,parent->cgroup->id);
 		css->cgroup->weight=0;
 		traverse_css_weight(next,parent);
-
 	}	
 
 	

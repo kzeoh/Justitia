@@ -1862,16 +1862,16 @@ static int __cfq_set_weight(struct cgroup_subsys_state *css, u64 val,
 	/*adding blkio weight to the cgroup value kwonje*/
 	
 	css->cgroup->weight = val;
-	printk("setting weight: %lld, id:%d cgrp id:%d\n",val, css->id, css->cgroup->id);
+//	printk("setting weight: %lld, id:%d cgrp id:%d\n",val, css->id, css->cgroup->id);
 	
 	if(css->parent != NULL){
 		parent = css->parent;
 		parent->cgroup->total_weight+=val;
 		total = parent->cgroup->total_weight;
-		printk("parent weight:%d %d, id: %d cgrp id: %d\n",parent->cgroup->weight, parent->parent->cgroup->weight, parent->id,parent->cgroup->id);
+//		printk("parent weight:%d %d, id: %d cgrp id: %d\n",parent->cgroup->weight, parent->parent->cgroup->weight, parent->id,parent->cgroup->id);
 		if(parent->cgroup->weight==0 && parent->cgroup->ratio==0)
 			parent->cgroup->ratio = parent->parent->cgroup->ratio;
-	//next = css_next_child(css,css->parent);
+		next = css_next_child(css,css->parent);
 		traverse_css_weight(next,parent);
 /*
 		list_for_each_entry_rcu(next,&parent->children,sibling){
